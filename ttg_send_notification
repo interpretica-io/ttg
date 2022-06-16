@@ -6,6 +6,14 @@ function fail()
 	exit 1
 }
 
+function cond_fail()
+{
+	local ignore_bad="$1"
+	shift 1
+	test -n "${ignore_bad}" && exit 0
+	fail $@
+}
+
 function usage()
 {
 	echo "Send notification to Telegram chat" >&2
@@ -16,6 +24,7 @@ function usage()
 	echo " --envchat <variable>   Environment variable to take chat id from" >&2
 	echo " --env                  Take token from TTG_PRIVATE_TOKEN variable," >&2
 	echo "                        and chat id from TTG_PRIVATE_CHAT variable" >&2
+	echo " --ignore-bad           Ignore missing token/chat id, exit with success" >&2
 	exit 2
 }
 
@@ -23,6 +32,7 @@ which curl > /dev/null 2> /dev/null || fail "curl is not installed"
 
 token=""
 chat=""
+ignore_bad=""
 
 test -n "$1" || usage
 
@@ -32,6 +42,9 @@ while test -n "$1" ; do
             token="$2"
             shift 1
             ;;
+        --ignore-bad)
+			ignore_bad="y"
+			;;
         --chat)
 			chat="$2"
 			shift 1
@@ -59,12 +72,12 @@ while test -n "$1" ; do
     shift 1
 done
 
-test -n "${token}" || fail "No token provided"
-test -n "${chat}" || fail "No chat ID provided"
+test -n "${token}" || cond_fail "${ignore_bad}" "No token provided"
+test -n "${chat}" || cond_fail "${ignore_bad}" "No chat ID provided"
 
 msg="$@"
 
-test -n "$msg" || fail "No text provided"
+test -n "$msg" || cond_fail "${ignore_bad}" "No text provided"
 
 curl -s -X POST https://api.telegram.org/bot${token}/sendMessage ${chat:+-d} ${chat:+chat_id="${chat}"} -d text="$msg"
 exit $?
