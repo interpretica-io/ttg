@@ -1,2 +1,5 @@
 # ttg
-Trivial bash scripts for Telegram
+A collection of trivial Bash scripts for Telegram manipulation.
+
+## License
+MIT
