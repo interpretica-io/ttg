@@ -1,0 +1,70 @@
+#!/bin/bash
+
+function fail()
+{
+	echo $@ >&2
+	exit 1
+}
+
+function usage()
+{
+	echo "Send notification to Telegram chat" >&2
+	echo "Usage: $0 [options] [--] text" >&2
+	echo " --token <token>        Chat bot's token" >&2
+	echo " --chat <chat id>       Target chat to send notification to" >&2
+	echo " --envtoken <variable>  Environment variable to take token from" >&2
+	echo " --envchat <variable>   Environment variable to take chat id from" >&2
+	echo " --env                  Take token from TTG_PRIVATE_TOKEN variable," >&2
+	echo "                        and chat id from TTG_PRIVATE_CHAT variable" >&2
+	exit 2
+}
+
+which curl > /dev/null 2> /dev/null || fail "curl is not installed"
+
+token=""
+chat=""
+
+test -n "$1" || usage
+
+while test -n "$1" ; do
+    case $1 in
+        --token)
+            token="$2"
+            shift 1
+            ;;
+        --chat)
+			chat="$2"
+			shift 1
+			;;
+		--envtoken)
+			token="${!2}"
+			shift 1
+			;;
+		--envchat)
+			chat="${!2}"
+			shift 1
+			;;
+		--env)
+			token="${TTG_PRIVATE_TOKEN}"
+			chat="${TTG_PRIVATE_CHAT}"
+			;;
+		--help)
+			usage
+			;;
+		--)
+			shift 1
+			break
+			;;
+    esac
+    shift 1
+done
+
+test -n "${token}" || fail "No token provided"
+test -n "${chat}" || fail "No chat ID provided"
+
+msg="$@"
+
+test -n "$msg" || fail "No text provided"
+
+curl -s -X POST https://api.telegram.org/bot${token}/sendMessage ${chat:+-d} ${chat:+chat_id="${chat}"} -d text="$msg"
+exit $?
